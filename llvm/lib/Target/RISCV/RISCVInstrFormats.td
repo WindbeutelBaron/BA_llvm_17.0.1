@@ -156,7 +156,7 @@ def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 def OPC_CHECK     : RISCVOpcode<"CHECK",     0b1111101>;
-
+def OPC_CORRECT   : RISCVOpcode<"CORRECT",   0b1111110>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -216,11 +216,14 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{20} =  UsesVXRM;
 }
 
-class RVInstCHECK<dag outs, dag ins,RISCVOpcode opcode> 
+class RVInstHOL<dag outs, dag ins, RISCVOpcode opcode, string asmstr, string argstr> 
     : Instruction {
   bits<20> hash;
-  bits<4> bbspec;
-
+  bit branch;
+  bit fall_through;
+  bit return_t;
+  bit call_t;
+  
   field bits<32> Inst;
 
   bits<7> Opcode = 0;
@@ -229,7 +232,10 @@ class RVInstCHECK<dag outs, dag ins,RISCVOpcode opcode>
 
   let Inst{31-12} = hash;  // Hash
   let Inst{11}    = 0;  // Unused
-  let Inst{10-7}  = bbspec;  // Specifics of the basic block
+  let Inst{10}    = branch;
+  let Inst{9}     = fall_through;
+  let Inst{8}     = return_t;
+  let Inst{7}     = call_t;
   let Opcode = opcode.Value;
 
   // SoftFail is a field the disassembler can use to provide a way for
@@ -244,7 +250,7 @@ class RVInstCHECK<dag outs, dag ins,RISCVOpcode opcode>
 
   let Namespace = "RISCV";
 
-  let AsmString = "check" # "\t" # "$hash $bbspec";
+  let AsmString = asmstr # "\t" # argstr;
 
   let TSFlags{4-0} = 22;
 

@@ -368,6 +368,7 @@ void RISCVPassConfig::addPreEmitPass2() {
   addPass(createRISCVExpandAtomicPseudoPass());
 
   addPass(createRISCVInsertCheckInstructionPass());
+  addPass(createRISCVInsertCorrectInstructionPass());
 
   // KCFI indirect call checks are lowered to a bundle.
   addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {

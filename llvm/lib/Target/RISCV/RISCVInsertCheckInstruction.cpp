@@ -30,18 +30,27 @@ namespace {
 
 
         // Placeholder immediate values
-      uint32_t Imm20 = 0xABCDE; // Example 20-bit immediate
-      uint8_t Imm4 = 0x5;       // Example 4-bit immediate
+      uint32_t hash            = 0xFFFFF; // Example 20-bit hash
+      uint8_t branch           = 1;
+      uint8_t fall_through     = 1;
+      uint8_t call_target      = 1;
+      uint8_t return_target    = 1;
 
-        // Ensure the immediate values fit within the desired bit widths
-      assert(Imm20 <= 0xFFFFF && "20-bit immediate is out of range");
-      assert(Imm4 <= 0xF && "4-bit immediate is out of range");
+        // Ensure the values fit within the desired bit widths
+      assert(hash            <= 0xFFFFF && "20-bit hash is out of range");
+      assert(branch          <= 0x1 && "1-bit status is out of range");
+      assert(fall_through    <= 0x1 && "1-bit status is out of range");
+      assert(call_target     <= 0x1 && "1-bit status is out of range");
+      assert(return_target   <= 0x1 && "1-bit status is out of range");
 
       for (auto &MBB : MF) {
         const DebugLoc &DL = MBB.findDebugLoc(MBB.begin());
         BuildMI(MBB, MBB.begin(), DL, TII->get(RISCV::CHECK))
-          .addImm(Imm20)
-          .addImm(Imm4);
+          .addImm(hash)
+          .addImm(branch)
+          .addImm(fall_through)
+          .addImm(call_target)
+          .addImm(return_target);
       }
 
       return true;

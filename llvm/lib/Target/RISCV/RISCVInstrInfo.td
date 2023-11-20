@@ -635,9 +635,16 @@ class Priv_rr<string opcodestr, bits<7> funct7>
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def CHECK : RVInstCHECK<(outs), (ins uimm20_check:$hash, uimm4:$bbspec), OPC_CHECK>, Sched<[WriteNop]>;
-
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def CHECK : RVInstHOL<(outs), (ins uimm20_check:$hash, uimm1:$branch, uimm1:$fall_through, uimm1:$return_t, uimm1:$call_t), 
+                          OPC_CHECK, "check", "$hash, $branch, $fall_through, $return_t, $call_t">, Sched<[WriteNop]>;
+  def CORRECT : RVInstHOL<(outs), (ins uimm20_check:$hash), OPC_CORRECT, "correct", "$hash">, Sched<[WriteNop]> {
+  let branch = 0;
+  let fall_through = 0;
+  let return_t = 0;
+  let call_t = 0;
+  }
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1,

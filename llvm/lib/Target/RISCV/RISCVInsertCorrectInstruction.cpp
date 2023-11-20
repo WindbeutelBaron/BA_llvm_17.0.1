@@ -3,6 +3,8 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "RISCVInstrInfo.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -30,28 +32,35 @@ namespace {
 
 
         // Placeholder immediate values
-      uint32_t hash            = 0xFFFFF; // Example 20-bit hash
-      uint8_t branch           = 1;
-      uint8_t fall_through     = 1;
-      uint8_t call_target      = 1;
-      uint8_t return_target    = 1;
+      uint32_t hash = 0; // Example 20-bit hash
 
         // Ensure the values fit within the desired bit widths
-      assert(hash            <= 0xFFFFF && "20-bit hash is out of range");
-      assert(branch          <= 0x1 && "1-bit status is out of range");
-      assert(fall_through    <= 0x1 && "1-bit status is out of range");
-      assert(call_target     <= 0x1 && "1-bit status is out of range");
-      assert(return_target   <= 0x1 && "1-bit status is out of range");
-
+      assert(hash <= 0xFFFFF && "20-bit hash is out of range");
       for (auto &MBB : MF) {
-        const DebugLoc &DL = MBB.findDebugLoc(MBB.begin());
-        BuildMI(MBB, MBB.begin(), DL, TII->get(RISCV::CORRECT))
-          .addImm(hash)
-          .addImm(branch)
-          .addImm(fall_through)
-          .addImm(call_target)
-          .addImm(return_target);
+        for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
+            MachineInstr &MI = *I;
+            if (MI.isBranch() || MI.isReturn() || MI.isCall() || MI.getOpcode() == RISCV::JAL || MI.getOpcode() == RISCV::JALR) {
+                    dbgs() << "Instruction: " << MI << "\n";
+                    for (const MachineOperand &MO : MI.operands()) {
+                        dbgs() << "  Operand Type: ";
+                        if (MO.isReg()) dbgs() << "Register";
+                        else if (MO.isImm()) dbgs() << "Immediate";
+                        else if (MO.isFPImm()) dbgs() << "Floating Point Immediate";
+                        else if (MO.isMBB()) dbgs() << "Basic Block";
+                        else if (MO.isGlobal()) dbgs() << "Global Address";
+                        else if (MO.isSymbol()) dbgs() << "Symbol";
+                        else if (MO.isCImm()) dbgs() << "Constant Integer";
+                        else if (MO.isCFIIndex()) dbgs() << "CFI Index";
+                        else dbgs() << "Other";
+                        dbgs() << "\n";
+                    }
+                    
+                    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::CORRECT))
+                      .addImm(hash);
+            }
+        }
       }
+      
 
       return true;
     }
@@ -70,7 +79,6 @@ INITIALIZE_PASS(RISCVInsertCorrectInstruction, "riscv-insert-correct-instruction
                 RISCV_INSERT_CORRECT_INSTRUCTION_NAME, false, false)
 
 // This function is required for `llvm::create` style pass creation
-// and must be implemented in the .cpp file where the pass ID is established.
 
 namespace llvm {
 
