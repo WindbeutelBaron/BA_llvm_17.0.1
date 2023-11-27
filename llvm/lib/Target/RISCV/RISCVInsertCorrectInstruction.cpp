@@ -37,24 +37,22 @@ namespace {
         // Ensure the values fit within the desired bit widths
       assert(hash <= 0xFFFFF && "20-bit hash is out of range");
       for (auto &MBB : MF) {
+        dbgs() << "Basic Block: " << MBB.getFullName() << "\n";
+        int L = 1;
+        for (auto *SuccMBB : MBB.successors()) {
+          dbgs() << "Successor " << "#" << L << ": " << SuccMBB->getFullName() << "\n";
+          L++;
+        }
+        L = 1;
+        // Iterate over predecessors
+        for (auto *PredMBB : MBB.predecessors()) {
+          dbgs() << "Predecessor " << "#" << L << ": " << PredMBB->getFullName() << "\n";
+          L++;
+        }
         for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
             MachineInstr &MI = *I;
             if (MI.isBranch() || MI.isReturn() || MI.isCall() || MI.getOpcode() == RISCV::JAL || MI.getOpcode() == RISCV::JALR) {
                     dbgs() << "Instruction: " << MI << "\n";
-                    for (const MachineOperand &MO : MI.operands()) {
-                        dbgs() << "  Operand Type: ";
-                        if (MO.isReg()) dbgs() << "Register";
-                        else if (MO.isImm()) dbgs() << "Immediate";
-                        else if (MO.isFPImm()) dbgs() << "Floating Point Immediate";
-                        else if (MO.isMBB()) dbgs() << "Basic Block";
-                        else if (MO.isGlobal()) dbgs() << "Global Address";
-                        else if (MO.isSymbol()) dbgs() << "Symbol";
-                        else if (MO.isCImm()) dbgs() << "Constant Integer";
-                        else if (MO.isCFIIndex()) dbgs() << "CFI Index";
-                        else dbgs() << "Other";
-                        dbgs() << "\n";
-                    }
-                    
                     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::CORRECT))
                       .addImm(hash);
             }

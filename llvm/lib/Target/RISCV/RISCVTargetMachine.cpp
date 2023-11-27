@@ -71,6 +71,12 @@ static cl::opt<bool> EnableRISCVCopyPropagation(
     cl::desc("Enable the copy propagation with RISC-V copy instr"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableRISCVHOLPasses(
+    "riscv-enable-hol",
+    cl::desc("Enable the passes needed for running on a RISC-V HOL Processor"),
+    cl::init(false));
+
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
@@ -367,13 +373,14 @@ void RISCVPassConfig::addPreEmitPass2() {
   // progress in the LR/SC block.
   addPass(createRISCVExpandAtomicPseudoPass());
 
-  addPass(createRISCVInsertCheckInstructionPass());
-  addPass(createRISCVInsertCorrectInstructionPass());
-
   // KCFI indirect call checks are lowered to a bundle.
   addPass(createUnpackMachineBundles([&](const MachineFunction &MF) {
     return MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
+  if (EnableRISCVHOLPasses) {
+    addPass(createRISCVInsertCheckInstructionPass());
+    addPass(createRISCVInsertCorrectInstructionPass());
+  }
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
