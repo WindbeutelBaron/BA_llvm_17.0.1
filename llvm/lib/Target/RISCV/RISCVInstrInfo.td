@@ -312,8 +312,8 @@ class UImm20Operand : Operand<XLenVT> {
   let OperandNamespace = "RISCVOp";
 }
 
-def uimm20_check : UImm20Operand {
-  let ParserMatchClass = UImmAsmOperand<20, "CHECK">;
+def uimm20 : UImm20Operand {
+  let ParserMatchClass = UImmAsmOperand<20>;
 }
 
 def uimm20_lui : UImm20Operand {
@@ -636,9 +636,11 @@ class Priv_rr<string opcodestr, bits<7> funct7>
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def CHECK : RVInstHOL<(outs), (ins uimm20_check:$hash, uimm1:$branch, uimm1:$fall_through, uimm1:$return_t, uimm1:$call_t), 
+  def CHECK : RVInstHolSecFwrd<(ins uimm20:$hash, uimm1:$branch, uimm1:$fall_through, uimm1:$return_t, uimm1:$call_t),
                           OPC_CHECK, "check", "$hash, $branch, $fall_through, $return_t, $call_t">, Sched<[WriteNop]>;
-  def CORRECT : RVInstHOL<(outs), (ins uimm20_check:$hash), OPC_CORRECT, "correct", "$hash">, Sched<[WriteNop]> {
+                          }
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def CORRECT : RVInstHolSecFwrd<(ins uimm20:$hash), OPC_CORRECT, "correct", "$hash">, Sched<[WriteNop]> {
   let branch = 0;
   let fall_through = 0;
   let return_t = 0;

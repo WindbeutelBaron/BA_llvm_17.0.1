@@ -3,12 +3,12 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "RISCVInstrInfo.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
+#include <vector>
 
 using namespace llvm;
 
@@ -25,46 +25,79 @@ namespace {
     }
 
     bool runOnMachineFunction(MachineFunction &MF) override {
-      dbgs() << "Running InsertCorrectInstructionPass on function " <<
-            MF.getName() << "\n";
+
       const RISCVInstrInfo *TII =
         static_cast<const RISCVInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
+      uint32_t Hash = 0xFFFFF;
 
-        // Placeholder immediate values
-      uint32_t hash = 0; // Example 20-bit hash
+      std::map<MachineBasicBlock*, std::vector<MachineBasicBlock*>> PredecessorMap;
+      std::map<MachineBasicBlock*, uint32_t> BranchCountMap;
+      uint32_t BranchCount;
+      for (MachineBasicBlock &MBB : MF) {
+        BranchCount = 0;
+        for (MachineInstrBundleIterator<llvm::MachineInstr, true> I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
+          MachineInstr &MI = *I;
+          if (MI.isCall()) {
+            BuildMI(MBB, MI, MI.getDebugLoc(),
+                    TII->get(RISCV::CORRECT))
+                .addImm(Hash);
+          }
+          if (MI.isBranch()) {
+            BranchCount++;
+          }
+        }
+        for (MachineBasicBlock *PredMBB : MBB.predecessors()) {
+          PredecessorMap[&MBB].push_back(PredMBB);
+        }
+        BranchCountMap[&MBB] = BranchCount;
+      }
 
-        // Ensure the values fit within the desired bit widths
-      assert(hash <= 0xFFFFF && "20-bit hash is out of range");
-      for (auto &MBB : MF) {
-        dbgs() << "Basic Block: " << MBB.getFullName() << "\n";
-        int L = 1;
-        for (auto *SuccMBB : MBB.successors()) {
-          dbgs() << "Successor " << "#" << L << ": " << SuccMBB->getFullName() << "\n";
-          L++;
-        }
-        L = 1;
-        // Iterate over predecessors
-        for (auto *PredMBB : MBB.predecessors()) {
-          dbgs() << "Predecessor " << "#" << L << ": " << PredMBB->getFullName() << "\n";
-          L++;
-        }
-        for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
-            MachineInstr &MI = *I;
-            if (MI.isBranch() || MI.isReturn() || MI.isCall() || MI.getOpcode() == RISCV::JAL || MI.getOpcode() == RISCV::JALR) {
-                    dbgs() << "Instruction: " << MI << "\n";
-                    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::CORRECT))
-                      .addImm(hash);
+      auto CompareBlocks = [&BranchCountMap](llvm::MachineBasicBlock* a, llvm::MachineBasicBlock* b) {
+        return BranchCountMap[a] > BranchCountMap[b];
+      };
+      Hash = 0;
+      for (std::pair<MachineBasicBlock* const, std::vector<MachineBasicBlock*>> &Entry : PredecessorMap) {
+        if (Entry.second.size() >= 2) {
+          std::sort(Entry.second.begin(), Entry.second.end(), CompareBlocks);
+          for (size_t i = 1; i < Entry.second.size(); ++i) {
+            MachineBasicBlock *PredMBB = Entry.second[i];
+            if (BranchCountMap[PredMBB] > 1) {
+              MachineInstrBundleIterator<MachineInstr, true> MI = findPosition(PredMBB, Entry.first);
+              BuildMI(*PredMBB, *MI, MI->getDebugLoc(),
+                      TII->get(RISCV::CORRECT))
+                  .addImm(Hash);
+            } else {
+              BuildMI(*PredMBB, PredMBB->back(), PredMBB->back().getDebugLoc(),
+                      TII->get(RISCV::CORRECT))
+                  .addImm(Hash);
             }
+          }
+          Hash++;
         }
       }
-      
-
       return true;
     }
 
+
     StringRef getPassName() const override {
       return "RISCV Insert CORRECT Instruction Pass";
+    }
+
+  private:
+    MachineInstrBundleIterator<MachineInstr, true> findPosition(MachineBasicBlock *PredMBB, MachineBasicBlock *TargetBB) {
+      for (MachineInstrBundleIterator<MachineInstr, true> MI = PredMBB->rbegin(), E = PredMBB->rend(); MI != E; ++MI) {
+        if (MI->isBranch()) {
+          for (const MachineOperand &MO : MI->operands()) {
+            if (MO.isMBB()) {
+              if (MO.getMBB() == TargetBB) {
+                return MI;
+              }
+            }
+          }
+        }
+      }
+      return NULL;
     }
   };
 
@@ -76,13 +109,11 @@ namespace {
 INITIALIZE_PASS(RISCVInsertCorrectInstruction, "riscv-insert-correct-instruction",
                 RISCV_INSERT_CORRECT_INSTRUCTION_NAME, false, false)
 
-// This function is required for `llvm::create` style pass creation
-
 namespace llvm {
 
 FunctionPass *createRISCVInsertCorrectInstructionPass() {
   return new RISCVInsertCorrectInstruction();
 }
 
-} // end of namespace llvm
+}
 

@@ -660,6 +660,7 @@ public:
   bool isUImm6() const { return IsUImm<6>(); }
   bool isUImm7() const { return IsUImm<7>(); }
   bool isUImm8() const { return IsUImm<8>(); }
+  bool isUImm20() const { return IsUImm<20>(); }
 
   bool isUImm8GE32() const {
     int64_t Imm;

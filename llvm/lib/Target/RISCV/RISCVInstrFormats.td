@@ -216,79 +216,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{20} =  UsesVXRM;
 }
 
-class RVInstHOL<dag outs, dag ins, RISCVOpcode opcode, string asmstr, string argstr> 
-    : Instruction {
-  bits<20> hash;
-  bit branch;
-  bit fall_through;
-  bit return_t;
-  bit call_t;
-  
-  field bits<32> Inst;
 
-  bits<7> Opcode = 0;
-
-  let Inst{6-0} = Opcode;
-
-  let Inst{31-12} = hash;  // Hash
-  let Inst{11}    = 0;  // Unused
-  let Inst{10}    = branch;
-  let Inst{9}     = fall_through;
-  let Inst{8}     = return_t;
-  let Inst{7}     = call_t;
-  let Opcode = opcode.Value;
-
-  // SoftFail is a field the disassembler can use to provide a way for
-  // instructions to not match without killing the whole decode process. It is
-  // mainly used for ARM, but Tablegen expects this field to exist or it fails
-  // to build the decode table.
-  field bits<32> SoftFail = 0;
-  let Size = 4;
-
-  dag OutOperandList = outs;
-  dag InOperandList = ins;
-
-  let Namespace = "RISCV";
-
-  let AsmString = asmstr # "\t" # argstr;
-
-  let TSFlags{4-0} = 22;
-
-  // Defaults
-  RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{7-5} = RVVConstraint.Value;
-
-  bits<3> VLMul = 0;
-  let TSFlags{10-8} = VLMul;
-
-  bit ForceTailAgnostic = false;
-  let TSFlags{11} = ForceTailAgnostic;
-
-  bit IsTiedPseudo = 0;
-  let TSFlags{12} = IsTiedPseudo;
-
-  bit HasSEWOp = 0;
-  let TSFlags{13} = HasSEWOp;
-
-  bit HasVLOp = 0;
-  let TSFlags{14} = HasVLOp;
-
-  bit HasVecPolicyOp = 0;
-  let TSFlags{15} = HasVecPolicyOp;
-
-  bit IsRVVWideningReduction = 0;
-  let TSFlags{16} = IsRVVWideningReduction;
-
-  bit UsesMaskPolicy = 0;
-  let TSFlags{17} = UsesMaskPolicy;
-
-  // Indicates that the result can be considered sign extended from bit 31. Some
-  // instructions with this flag aren't W instructions, but are either sign
-  // extended from a smaller size, always outputs a small integer, or put zeros
-  // in bits 63:31. Used by the SExtWRemoval pass.
-  bit IsSignExtendingOpW = 0;
-  let TSFlags{18} = IsSignExtendingOpW;
-}
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
@@ -301,6 +229,29 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   field bits<32> SoftFail = 0;
   let Size = 4;
 }
+
+class RVInstHolSecFwrd<dag ins, RISCVOpcode opcode, string opcodestr, string argstr>
+    : RVInst<(outs), ins, opcodestr, argstr,
+                   [], InstFormatOther> {
+        bits<20> hash;
+        bit branch;
+        bit fall_through;
+        bit return_t;
+        bit call_t;
+
+        bits<7> Opcode;
+
+        let Inst{31-12} = hash;  // Hash
+        let Inst{11}    = 0;  // Unused
+        let Inst{10}    = branch;
+        let Inst{9}     = fall_through;
+        let Inst{8}     = return_t;
+        let Inst{7}     = call_t;
+        let Inst{6-0} = opcode.Value;
+}
+
+
+
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">

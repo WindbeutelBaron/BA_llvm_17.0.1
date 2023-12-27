@@ -72,8 +72,8 @@ static cl::opt<bool> EnableRISCVCopyPropagation(
     cl::init(true), cl::Hidden);
 
 static cl::opt<bool> EnableRISCVHOLPasses(
-    "riscv-enable-hol",
-    cl::desc("Enable the passes needed for running on a RISC-V HOL Processor"),
+    "enable-riscv-holsec",
+    cl::desc("Enable the passes needed for running on a RISC-V HolSec Extension"),
     cl::init(false));
 
 

@@ -287,6 +287,9 @@ public:
   ///  Return true if the instruction is a call.
   bool isCall() const { return Flags & (1ULL << MCID::Call); }
 
+  ///  Return true if the instruction is a basic block barrier.
+  bool isBBB() const { return Flags & (1ULL << MCID::BBB); }
+
   /// Returns true if the specified instruction stops control flow
   /// from executing the instruction immediately following it.  Examples include
   /// unconditional branches and return instructions.
