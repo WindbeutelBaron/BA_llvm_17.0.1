@@ -155,8 +155,12 @@ def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
-def OPC_CHECK     : RISCVOpcode<"CHECK",     0b1111101>;
-def OPC_CORRECT   : RISCVOpcode<"CORRECT",   0b1111110>;
+def OPC_CHECK     : RISCVOpcode<"CHECK",     0b1100001>;
+def OPC_CORRECT   : RISCVOpcode<"CORRECT",   0b1100101>;
+def OPC_ENCCPTR   : RISCVOpcode<"ENCCPTR",   0b1101001>;
+def OPC_ENCDPTR   : RISCVOpcode<"ENCDPTR",   0b1101101>;
+def OPC_DECCPTR   : RISCVOpcode<"DECCPTR",   0b1110001>;
+def OPC_DECDPTR   : RISCVOpcode<"DECDPTR",   0b1110101>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
